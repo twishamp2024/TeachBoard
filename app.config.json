@@ -1,0 +1,11 @@
+{
+  "appName": "TeachBoard",
+  "appId": "app.teachboard.desktop",
+  "version": "1.0.0",
+  "description": "An offline whiteboard and digital teaching application for Windows and macOS.",
+  "author": "TeachBoard Contributors",
+  "copyright": "Copyright © 2026 TeachBoard Contributors",
+  "fileExtension": "tboard",
+  "fileMime": "application/x-teachboard",
+  "fileDescription": "TeachBoard Lesson"
+}

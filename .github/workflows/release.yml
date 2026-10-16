@@ -1,0 +1,118 @@
+# Builds and tests the installers on their native operating systems:
+#   Windows runner → release/windows/setup.exe
+#   macOS runner   → release/macos/setup.dmg
+# Signing/notarisation secrets are optional; without them the artifacts are
+# unsigned (Windows) or ad-hoc signed (macOS). See docs/PACKAGING.md.
+name: Build installers
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm run typecheck
+      - run: npm test
+
+  windows:
+    name: Windows setup.exe
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: End-to-end tests (built app)
+        run: npm run test:e2e
+      - name: Build installer
+        run: npm run dist:win
+        env:
+          # Optional code signing (PFX as base64 + password).
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      - name: Install silently, run e2e against the installed app, uninstall
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'TeachBoardInstall'
+          Start-Process -Wait -FilePath release\windows\setup.exe -ArgumentList '/S', "/D=$dir"
+          $exe = Get-ChildItem $dir -Filter *.exe | Where-Object { $_.Name -notlike 'Uninstall*' } | Select-Object -First 1
+          $env:TB_EXECUTABLE = $exe.FullName
+          npx playwright test
+          $un = Get-ChildItem $dir -Filter 'Uninstall*.exe' | Select-Object -First 1
+          Start-Process -Wait -FilePath $un.FullName -ArgumentList '/S'
+          Start-Sleep -Seconds 5
+          if (Test-Path $exe.FullName) { throw 'Uninstall left the executable behind' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: release/windows/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-test-results
+          path: test-results/
+
+  macos:
+    name: macOS setup.dmg
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: End-to-end tests (built app)
+        run: npm run test:e2e
+      - name: Build disk image
+        run: npm run dist:mac
+        env:
+          # Optional Developer ID signing and notarisation.
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Mount the DMG, check the bundle, run e2e against the installed app
+        run: |
+          set -euo pipefail
+          hdiutil attach release/macos/setup.dmg -nobrowse -mountpoint /Volumes/tb-setup
+          ls -la /Volumes/tb-setup
+          test -L /Volumes/tb-setup/Applications
+          APP=$(ls -d /Volumes/tb-setup/*.app | head -1)
+          codesign --verify --deep --strict "$APP"
+          plutil -p "$APP/Contents/Info.plist" | grep -E 'CFBundleName|CFBundleShortVersionString|CFBundleIdentifier'
+          lipo -archs "$APP/Contents/MacOS/"*
+          mkdir -p "$RUNNER_TEMP/Applications"
+          cp -R "$APP" "$RUNNER_TEMP/Applications/"
+          hdiutil detach /Volumes/tb-setup
+          NAME=$(basename "$APP" .app)
+          TB_EXECUTABLE="$RUNNER_TEMP/Applications/$NAME.app/Contents/MacOS/$NAME" npx playwright test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-setup
+          path: release/macos/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-test-results
+          path: test-results/

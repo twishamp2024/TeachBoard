@@ -1,0 +1,101 @@
+/*
+ * TeachBoard design tokens. See docs/DESIGN_SYSTEM.md.
+ * "Board green" accent, quiet neutral chrome, generous touch targets.
+ */
+:root {
+  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
+
+  --fs-xs: 11px;
+  --fs-s: 12px;
+  --fs-m: 13px;
+  --fs-l: 15px;
+  --fs-xl: 18px;
+  --fs-xxl: 22px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  --r-s: 6px;
+  --r-m: 9px;
+  --r-l: 13px;
+  --r-xl: 18px;
+  --r-pill: 999px;
+
+  --topbar-h: 46px;
+  --tool-size: 44px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 140ms;
+
+  /* Light theme */
+  --c-workspace: #e6e9ed;
+  --c-workspace-dots: rgba(40, 52, 66, 0.07);
+  --c-surface: #ffffff;
+  --c-surface-2: #f5f6f8;
+  --c-surface-3: #eceef2;
+  --c-glass: rgba(255, 255, 255, 0.94);
+  --c-border: #dde1e6;
+  --c-border-strong: #c5cbd3;
+  --c-text: #1e2228;
+  --c-text-2: #545c68;
+  --c-text-3: #848c98;
+  --c-hover: rgba(30, 34, 40, 0.06);
+  --c-press: rgba(30, 34, 40, 0.1);
+  --c-accent: #0f8b78;
+  --c-accent-hover: #0c7766;
+  --c-accent-soft: #dcf2ed;
+  --c-accent-text: #0b6f60;
+  --c-on-accent: #ffffff;
+  --c-danger: #c23434;
+  --c-danger-soft: #fbe6e6;
+  --c-success: #23854a;
+  --c-warning: #a86400;
+  --c-focus: #1c7ed6;
+  --c-scrim: rgba(18, 22, 28, 0.38);
+  --c-selection: #0f8b78;
+
+  --shadow-1: 0 1px 2px rgba(20, 28, 38, 0.08), 0 1px 1px rgba(20, 28, 38, 0.04);
+  --shadow-2: 0 4px 14px rgba(20, 28, 38, 0.1), 0 1px 3px rgba(20, 28, 38, 0.08);
+  --shadow-3: 0 14px 40px rgba(20, 28, 38, 0.16), 0 3px 10px rgba(20, 28, 38, 0.08);
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --c-workspace: #121418;
+  --c-workspace-dots: rgba(255, 255, 255, 0.045);
+  --c-surface: #1c1f25;
+  --c-surface-2: #22262d;
+  --c-surface-3: #2a2f37;
+  --c-glass: rgba(32, 36, 43, 0.96);
+  --c-border: #313740;
+  --c-border-strong: #434a55;
+  --c-text: #e6e8eb;
+  --c-text-2: #aab1bc;
+  --c-text-3: #7d8591;
+  --c-hover: rgba(255, 255, 255, 0.07);
+  --c-press: rgba(255, 255, 255, 0.12);
+  --c-accent: #2fb9a1;
+  --c-accent-hover: #42c9b1;
+  --c-accent-soft: rgba(47, 185, 161, 0.17);
+  --c-accent-text: #5ad3bd;
+  --c-on-accent: #07211c;
+  --c-danger: #ef6b6b;
+  --c-danger-soft: rgba(239, 107, 107, 0.15);
+  --c-success: #4cc27a;
+  --c-warning: #e4a443;
+  --c-focus: #5aa9f0;
+  --c-scrim: rgba(0, 0, 0, 0.55);
+  --c-selection: #2fb9a1;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-3: 0 16px 44px rgba(0, 0, 0, 0.55), 0 3px 10px rgba(0, 0, 0, 0.35);
+
+  color-scheme: dark;
+}
