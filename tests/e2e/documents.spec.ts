@@ -16,7 +16,7 @@ import {
   stubOpenDialog,
   stubSaveDialog,
   tempDir,
-  type Launched, MOD } from './helpers'
+  type Launched, MOD, isMacHost, saveDialogsShown } from './helpers'
 
 let t: Launched
 
@@ -137,14 +137,19 @@ test('AC-07 save and reopen after restart; unsaved changes, cancelled dialogs an
   ])
   await stubSaveDialog(app, null)
   await page.keyboard.press(MOD + '+S')
-  await page.waitForTimeout(300)
+  // Wait until the save really reached (and was cancelled at) its dialog.
+  await expect.poll(() => saveDialogsShown(app)).toBe(1)
+  await page.waitForTimeout(200)
   expect((await docState(page)).dirty).toBe(true)
   expect(readdirSync(dir)).toEqual([])
 
   // Real save; the untitled lesson takes the file's name.
+  // Pressing Save twice quickly runs one save, not two overlapping ones.
   await stubSaveDialog(app, file)
   await page.keyboard.press(MOD + '+S')
+  await page.keyboard.press(MOD + '+S')
   await expect.poll(async () => (await docState(page)).dirty).toBe(false)
+  expect(await saveDialogsShown(app)).toBe(1)
   expect((await docState(page)).title).toBe('Lesson 7')
   const saved = await pageObjects(page)
 
@@ -185,9 +190,16 @@ test('AC-07 save and reopen after restart; unsaved changes, cancelled dialogs an
   await page.keyboard.press(MOD + '+A')
   await page.keyboard.press('Delete')
   await stubMessageBox(app, 'Save')
-  const closed = app.waitForEvent('close')
+  const windowClosed = page.waitForEvent('close')
+  // Windows convention: closing the last window quits the app. macOS keeps it running.
+  const appExited = isMacHost ? null : app.waitForEvent('close')
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close())
-  await closed
+  await windowClosed
+  if (appExited) await appExited
+  else {
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(0)
+    await forceQuit(app)
+  }
   t = await launch({ userData })
   ;({ page, app } = t)
   await stubOpenDialog(app, [file])

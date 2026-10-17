@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MATH_SYMBOL_GROUPS, MATH_TEMPLATES, renderMath } from '../../core/math'
 import type { Id, MathObject } from '../../core/model'
 import { currentPage, onPage, useDoc } from '../../state/doc'
@@ -44,12 +44,21 @@ export function MathDialog({ editId, at }: { editId?: Id; at?: { x: number; y: n
       pos = start + ins.length
     }
     const next = latex.slice(0, start) + ins + latex.slice(end)
+    pendingCaret.current = pos
     setLatex(next)
-    requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(pos, pos)
-    })
   }
+
+  // Place the caret as soon as the new value is in the DOM, before the next
+  // keystroke can arrive (a frame later is too late for a fast typist).
+  const pendingCaret = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const pos = pendingCaret.current
+    if (!el || pos === null) return
+    pendingCaret.current = null
+    el.focus()
+    el.setSelectionRange(pos, pos)
+  }, [latex])
 
   const close = () => useUi.getState().closeDialog()
 
@@ -119,7 +128,16 @@ export function MathDialog({ editId, at }: { editId?: Id; at?: { x: number; y: n
         </div>
         <div className="math-palette__keys">
           {g.items.map((it) => (
-            <button key={it.title + it.label} type="button" className="math-key" onClick={() => insert(it.insert, it.caret)} data-tip={it.title} aria-label={it.title}>
+            <button
+              key={it.title + it.label}
+              type="button"
+              className="math-key"
+              // Keep focus (and the caret) in the expression box when clicked.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => insert(it.insert, it.caret)}
+              data-tip={it.title}
+              aria-label={it.title}
+            >
               {it.label}
             </button>
           ))}

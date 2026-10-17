@@ -300,10 +300,11 @@ test('AC-11 stylus: pen pointer events with pressure produce pressure-sensitive 
   const ps = (pen.points as number[]).filter((_, i) => i % 3 === 2)
   expect(Math.min(...ps)).toBeLessThan(0.3)
   expect(Math.max(...ps)).toBeGreaterThan(0.8)
-  // Continuity: no gaps larger than the sampling step.
+  // Continuity: no gaps larger than the input steps (≤ ~19 screen px, incl. the release point),
+  // measured in screen pixels so the check holds at any zoom / screen size.
+  const zoom = (await viewport(page)).zoom
   const pts = pen.points as number[]
-  for (let i = 3; i < pts.length; i += 3) expect(Math.hypot(pts[i] - pts[i - 3], pts[i + 1] - pts[i - 2])).toBeLessThan(40)
-
+  for (let i = 3; i < pts.length; i += 3) expect(Math.hypot(pts[i] - pts[i - 3], pts[i + 1] - pts[i - 2]) * zoom).toBeLessThan(24)
 
   // A mouse stroke records no pressure.
   await drawPath(page, [

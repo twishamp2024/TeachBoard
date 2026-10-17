@@ -51,7 +51,22 @@ async function previewPng(doc: LessonDocument): Promise<Uint8Array | null> {
 // ---------------------------------------------------------------------------
 // Save / open / new
 
-export async function saveDocument(saveAs = false): Promise<boolean> {
+let saveInProgress: Promise<boolean> | null = null
+
+/**
+ * Saves the lesson (asking for a location when needed). Saves never overlap:
+ * a request made while one is running joins it instead of starting another.
+ */
+export function saveDocument(saveAs = false): Promise<boolean> {
+  if (!saveInProgress) {
+    saveInProgress = runSave(saveAs).finally(() => {
+      saveInProgress = null
+    })
+  }
+  return saveInProgress
+}
+
+async function runSave(saveAs: boolean): Promise<boolean> {
   const start = useDoc.getState()
   if (start.txBase) start.end('Edit')
   const s = useDoc.getState()

@@ -54,8 +54,18 @@ export async function forceQuit(app: ElectronApplication): Promise<void> {
 
 export async function stubSaveDialog(app: ElectronApplication, filePath: string | null): Promise<void> {
   await app.evaluate(({ dialog }, p) => {
-    ;(dialog as unknown as Record<string, unknown>).showSaveDialog = async () => (p ? { canceled: false, filePath: p } : { canceled: true, filePath: undefined })
+    const g = globalThis as unknown as { __tbSaveDialogs?: number }
+    g.__tbSaveDialogs = 0
+    ;(dialog as unknown as Record<string, unknown>).showSaveDialog = async () => {
+      g.__tbSaveDialogs = (g.__tbSaveDialogs ?? 0) + 1
+      return p ? { canceled: false, filePath: p } : { canceled: true, filePath: undefined }
+    }
   }, filePath)
+}
+
+/** How many times the stubbed save dialog has been shown since it was installed. */
+export async function saveDialogsShown(app: ElectronApplication): Promise<number> {
+  return app.evaluate(() => (globalThis as unknown as { __tbSaveDialogs?: number }).__tbSaveDialogs ?? 0)
 }
 
 export async function stubOpenDialog(app: ElectronApplication, filePaths: string[] | null): Promise<void> {
