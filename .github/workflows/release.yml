@@ -33,14 +33,23 @@ jobs:
       - name: Unit tests
         run: npm test
       - name: Build disk image
-        run: npm run dist:mac
+        # Optional Developer ID signing and notarisation (see docs/PACKAGING.md).
+        # Secrets that are not configured arrive empty; only export real values
+        # so an unsigned build stays unsigned (ad hoc) instead of failing.
+        run: |
+          set -euo pipefail
+          if [ -n "$SEC_CSC_LINK" ]; then export CSC_LINK="$SEC_CSC_LINK"; fi
+          if [ -n "$SEC_CSC_KEY_PASSWORD" ]; then export CSC_KEY_PASSWORD="$SEC_CSC_KEY_PASSWORD"; fi
+          if [ -n "$SEC_APPLE_ID" ]; then export APPLE_ID="$SEC_APPLE_ID"; fi
+          if [ -n "$SEC_APPLE_APP_SPECIFIC_PASSWORD" ]; then export APPLE_APP_SPECIFIC_PASSWORD="$SEC_APPLE_APP_SPECIFIC_PASSWORD"; fi
+          if [ -n "$SEC_APPLE_TEAM_ID" ]; then export APPLE_TEAM_ID="$SEC_APPLE_TEAM_ID"; fi
+          npm run dist:mac
         env:
-          # Optional Developer ID signing and notarisation (see docs/PACKAGING.md).
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SEC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          SEC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          SEC_APPLE_ID: ${{ secrets.APPLE_ID }}
+          SEC_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          SEC_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       - name: Mount the DMG, check the bundle, run e2e against the installed app
         run: |
           set -euo pipefail

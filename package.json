@@ -17,8 +17,8 @@
     "test:e2e": "npm run build && playwright test",
     "icons": "node scripts/make-icons.mjs",
     "sync-config": "node scripts/sync-app-config.mjs",
-    "dist:win": "npm run sync-config && npm run build && electron-builder --win --config electron-builder.config.cjs && node scripts/collect-release.mjs win",
-    "dist:mac": "npm run sync-config && npm run build && electron-builder --mac --config electron-builder.config.cjs && node scripts/collect-release.mjs mac",
+    "dist:win": "npm run sync-config && npm run build && electron-builder --win --publish never --config electron-builder.config.cjs && node scripts/collect-release.mjs win",
+    "dist:mac": "npm run sync-config && npm run build && electron-builder --mac --publish never --config electron-builder.config.cjs && node scripts/collect-release.mjs mac",
     "postinstall": "node node_modules/electron/install.js"
   },
   "dependencies": {},

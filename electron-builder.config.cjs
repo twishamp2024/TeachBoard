@@ -8,6 +8,12 @@
  */
 const app = require('./app.config.json')
 
+// CI passes unset secrets as empty strings; electron-builder would treat an
+// empty CSC_LINK as a certificate path. Treat empty values as not set.
+for (const key of ['CSC_LINK', 'CSC_KEY_PASSWORD', 'CSC_NAME', 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID']) {
+  if (process.env[key] === '') delete process.env[key]
+}
+
 const isMacBuild = process.argv.includes('--mac') || process.platform === 'darwin'
 const hasMacIdentity = !!(process.env.CSC_LINK || process.env.CSC_NAME)
 const canNotarize = !!(process.env.APPLE_ID && process.env.APPLE_APP_SPECIFIC_PASSWORD && process.env.APPLE_TEAM_ID)
