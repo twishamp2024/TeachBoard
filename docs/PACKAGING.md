@@ -108,20 +108,18 @@ xcrun stapler validate release/macos/setup.dmg
 
 ## Continuous integration
 
-[`.github/workflows/release.yml`](../.github/workflows/release.yml) builds on
-each `v*` tag (or manually):
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) is kept
+deliberately lean: a single macOS job that runs only when a `v*` tag is
+pushed, with at most one run at a time. It type-checks, runs the unit
+tests, builds `setup.dmg`, mounts it, checks the *Applications* link,
+`codesign --verify`, bundle metadata and universal architectures, copies
+the app out, runs the end-to-end suite against that installed app, and
+uploads `release/macos/` as the `macos-setup` artifact.
 
-1. **Unit tests** and type checking on Linux.
-2. **Windows runner:** end-to-end tests against the built app → `setup.exe`
-   → silent install → the full end-to-end suite again against the
-   **installed** executable → silent uninstall and a check that it is gone →
-   uploads `release/windows/`.
-3. **macOS runner:** end-to-end tests → `setup.dmg` → mounts the image,
-   checks the *Applications* link, `codesign --verify`, bundle metadata and
-   universal architectures → copies the app out and runs the end-to-end
-   suite against it → uploads `release/macos/`.
+The Windows installer is built and verified locally on Windows (see
+*Windows — setup.exe* and *Testing a packaged build locally*).
 
-Optional repository secrets: `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`,
+Optional repository secrets for a signed and notarised DMG:
 `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_ID`,
 `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`.
 
