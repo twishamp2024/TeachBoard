@@ -2,11 +2,13 @@
 
 Status values: **Not started** · **In progress** · **Implemented, not yet verified** · **Verified** · **Blocked by a documented limitation**.
 
-"Verified" means the listed automated test was run and passed — against the
-built application *and* against the application installed from
-`release/windows/setup.exe` — on Windows 11 (x64). Results recorded on
-2026-10-18 for the installer built from commit `6fbad15`. macOS results are
-pending a macOS build (see the end of this document).
+"Verified" means the listed automated test was run and passed — on Windows
+11 (x64) against the built application *and* the application installed from
+`setup.exe` (built from commit `6fbad15`), and on macOS (GitHub macOS runner,
+Apple silicon) against the application installed from `setup.dmg` (CI run
+[39073595235](https://github.com/twishamp2024/TeachBoard/actions/runs/39073595235),
+commit `72931c7`). Results recorded on 2026-10-18. Both installers are
+published on the [v1.0.0 release](https://github.com/twishamp2024/TeachBoard/releases/tag/v1.0.0).
 
 ## Test runs
 
@@ -16,7 +18,9 @@ pending a macOS build (see the end of this document).
 | Unit tests (engine) | `npm test` | **72 / 72 passed** (7 files) |
 | End-to-end, built app | `npm run test:e2e` | **15 / 15 passed** |
 | End-to-end, **installed** app | install `setup.exe /S`, then `TB_EXECUTABLE=…\TeachBoard.exe npx playwright test` | **15 / 15 passed** (JSON report: `release/logs/e2e-installed-windows.json`) |
-| Installer | silent install → inspect → open a `.tboard` via the exe → silent uninstall → inspect | Pass (details under *Windows release*) |
+| Installer (Windows) | silent install → inspect → open a `.tboard` via the exe → silent uninstall → inspect | Pass (details under *Windows release*) |
+| Unit tests on macOS | CI: `npm test` | **72 / 72 passed** |
+| End-to-end, **installed** app (macOS) | CI: mount `setup.dmg`, copy the app out, `TB_EXECUTABLE=…/TeachBoard.app/Contents/MacOS/TeachBoard npx playwright test` | **15 / 15 passed** (job log: `release/logs/ci-macos.log`) |
 
 The end-to-end tests drive the real Electron application with mouse,
 keyboard and synthesised stylus input. Only the operating system's own
@@ -40,7 +44,7 @@ reading files from disk, exporting, printing preparation — runs for real.
 | AC-09 | Presentation mode | **Verified** | `ui/present/Presentation.tsx` | `presentation.spec.ts › AC-09`: F5 enters full screen from page 1; pixels confirm ink and the chalkboard background; arrows, click and Home navigate and stop at the ends; temporary ink and laser used; Esc exits full screen; document and revision unchanged; Shift+F5 presents the current page; leaving OS full screen ends the presentation | Pass | Single display only (no separate presenter view) |
 | AC-10 | Zoom and pan | **Verified** | `core/viewport.ts`, `state/view.ts`, `ui/canvas/CanvasView.tsx` | `drawing.spec.ts › AC-10`: draw at three zoom levels and compare stored page coordinates with the intended ones (≤ 1.5 screen px); hand-tool pan moves exactly by the drag; Ctrl+wheel zooms; resize the window, fit, draw and re-check alignment; export PNG at two zoom levels → identical 3840×2160 output. Unit: `misc.test.ts › viewport transforms` | Pass | — |
 | AC-11 | Pen tablet support | **Verified** (synthetic stylus) / **Blocked by a documented limitation** (physical hardware) | `ui/canvas/CanvasView.tsx`, `tools/inkTools.ts`, `core/strokes.ts` | `drawing.spec.ts › AC-11`: Chromium DevTools dispatches real `pointerType: "pen"` events with pressure 0.03–1.0: the stroke records `pressure: true`, the pressure range, and no gaps; a mouse stroke records no pressure | Pass | **No physical pen tablet was available.** Still to verify on hardware: real pressure curves (Wacom/Huion on Windows Ink and macOS), the pen's eraser end (cannot be synthesised), palm/touch behaviour, Apple Pencil via Sidecar |
-| AC-12 | Keyboard shortcuts | **Verified** (Windows) / **Implemented, not yet verified** (macOS) | `core/shortcuts.ts`, `shared/commands.ts`, `ui/App.tsx`, `ui/dialogs/SettingsDialog.tsx` | `shortcuts.spec.ts › AC-12`: all 11 tool keys; Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z; copy/paste/duplicate/select all/delete; page navigation; zoom; typing in a text box doesn't trigger tools and Ctrl+Z undoes typing only; Ctrl+S/N/O/Shift+S; tool keys ignored while a dialog is open; conflicting custom key refused with a message; Save cannot lose its only shortcut; custom key works, persists in `settings.json` and survives a restart. Unit: `shortcuts.test.ts` (macOS ⌘ mapping, ⇧⌘Z redo, ⌃⌘F full screen, reserved keys, no default conflicts on either platform) | Pass | macOS behaviour is covered by unit tests and the CI workflow but has not been run on a Mac yet |
+| AC-12 | Keyboard shortcuts | **Verified** (Windows and macOS) | `core/shortcuts.ts`, `shared/commands.ts`, `ui/App.tsx`, `ui/dialogs/SettingsDialog.tsx` | `shortcuts.spec.ts › AC-12`: all 11 tool keys; Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z; copy/paste/duplicate/select all/delete; page navigation; zoom; typing in a text box doesn't trigger tools and Ctrl+Z undoes typing only; Ctrl+S/N/O/Shift+S; tool keys ignored while a dialog is open; conflicting custom key refused with a message; Save cannot lose its only shortcut; custom key works, persists in `settings.json` and survives a restart. On macOS the same test runs with ⌘ in place of Ctrl and ⇧⌘Z for redo, against the app installed from `setup.dmg`. Unit: `shortcuts.test.ts` (macOS ⌘ mapping, ⇧⌘Z redo, ⌃⌘F full screen, reserved keys, no default conflicts on either platform) | Pass (Windows and macOS) | — |
 
 **Additional verified behaviour:** crash recovery (`recovery.spec.ts`: an
 abrupt exit with unsaved work → snapshot offered on next launch → restored
@@ -65,17 +69,19 @@ across restarts, and the calculator placing its result on the page
 
 | Check | Status | Notes |
 |---|---|---|
-| Genuine `setup.dmg` | **Blocked by a documented limitation** | A DMG can only be built on macOS. `npm run dist:mac` and the `macos` job in `.github/workflows/release.yml` are configured (universal binary, Applications link, ad-hoc signing without credentials). An earlier run on a GitHub macOS runner passed 12 of 15 end-to-end tests against the built app; the 3 failures (equation-palette caret timing and two test assumptions about screen size and macOS window-close behaviour) have since been fixed. |
-| Install and launch, core workflows | **Blocked** (as above) | The CI job mounts the DMG, verifies the Applications link, `codesign`, bundle metadata and architectures, copies the app out and runs the full end-to-end suite against it. |
-| Signing / notarisation | **Blocked by a documented limitation** | Needs an Apple Developer ID and Apple ID credentials (repository secrets listed in PACKAGING.md). Without them, Gatekeeper requires right-click → Open on first launch. |
+| Genuine `setup.dmg` exists | **Verified** | Built by the `macos` job on a GitHub macOS runner (CI run 39073595235); 233 MB UDIF disk image (`koly` trailer), SHA-256 `52a8ce731de4dfac389fd8f4f9d7bc54e60dbc2d52cee788ae22a27b9a8f6725`, identical after download |
+| Contents and metadata | **Verified** | Mounted image contains `TeachBoard.app` and an *Applications* link; `CFBundleName` TeachBoard, `CFBundleIdentifier` app.teachboard.desktop, version 1.0.0; universal binary (`x86_64 arm64`) |
+| Install and launch, core workflows | **Verified** (Apple silicon) | App copied out of the DMG into an Applications folder; the full end-to-end suite (15 tests, all 12 acceptance criteria) passed against it. The Intel slice was built but not run (the runner is Apple silicon). |
+| Code signature | **Verified** (ad hoc) | `codesign --verify --deep --strict` passes. |
+| Developer ID signing / notarisation | **Blocked by a documented limitation** | Needs an Apple Developer ID and Apple ID credentials (repository secrets listed in PACKAGING.md). Without them, Gatekeeper requires right-click → Open on first launch. |
 
 ## Cross-platform consistency
 
 | Check | Status | Notes |
 |---|---|---|
-| Same file format on both OSes | **Implemented, not yet verified on macOS** | The format has no absolute paths or platform data; fonts are bundled; files are plain ZIP + JSON (unit-tested round trips). |
-| Transfer of lessons Windows ↔ macOS | **Implemented, not yet verified** | Needs a lesson saved on one OS opened on the other. |
-| Platform shortcut conventions | **Verified (Windows), unit-tested (macOS)** | See AC-12. |
+| Same file format on both OSes | **Verified** | Save/reopen, export and the format unit tests pass on both Windows and macOS with the same code; the format has no absolute paths or platform data and fonts are bundled. |
+| Transfer of lessons Windows ↔ macOS | **Implemented, not yet verified** | No lesson has yet been saved on one machine and opened on the other. |
+| Platform shortcut conventions | **Verified** (Windows and macOS) | See AC-12. |
 
 ## Feature summary
 

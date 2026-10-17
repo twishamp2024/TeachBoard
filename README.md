@@ -54,9 +54,14 @@ files — no account, no cloud.
 
 ## Download & install
 
-See **[docs/INSTALL.md](docs/INSTALL.md)**. Installers:
-`release/windows/setup.exe` and `release/macos/setup.dmg` (built on macOS —
-see [docs/PACKAGING.md](docs/PACKAGING.md)).
+Download the installers from the **[latest release](https://github.com/twishamp2024/TeachBoard/releases/latest)**:
+
+* **Windows 10/11:** [`setup.exe`](https://github.com/twishamp2024/TeachBoard/releases/download/v1.0.0/setup.exe)
+* **macOS 12+ (Apple silicon & Intel):** [`setup.dmg`](https://github.com/twishamp2024/TeachBoard/releases/download/v1.0.0/setup.dmg)
+
+Neither installer is code-signed yet; see **[docs/INSTALL.md](docs/INSTALL.md)**
+for the one-time security prompts. To build them yourself, see
+[docs/PACKAGING.md](docs/PACKAGING.md).
 
 ## Development
 
