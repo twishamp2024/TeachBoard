@@ -89,16 +89,32 @@ test('AC-04 text and maths: add, edit, move, delete, equations, save/reopen and 
   await page.locator('.math-input').fill('2x + 3 &= 11\n2x &= 8\nx &= 4')
   await page.locator('.dialog .btn--primary').click()
 
-  // Rendering: the equation pixels are drawn (dark ink inside its box).
-  await page.waitForTimeout(500)
-  const hasInk = await page.evaluate(() => {
-    const c = document.querySelector('.canvas-layer') as HTMLCanvasElement
-    const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data
-    let dark = 0
-    for (let i = 0; i < d.length; i += 16) if (d[i] < 80 && d[i + 3] > 200) dark++
-    return dark
-  })
-  expect(hasInk).toBeGreaterThan(200)
+  // Rendering: every equation is typeset onto the canvas — dark glyph pixels
+  // inside its own box (an unloaded equation shows only a pale placeholder).
+  // Measured as a fraction of the box, so it holds at any zoom or pixel density.
+  const inkPerEquation = () =>
+    page.evaluate(() => {
+      const tb = (window as any).__tb
+      const s = tb.useDoc.getState()
+      const pageObj = s.doc.sections.flatMap((x: any) => x.pages).find((p: any) => p.id === s.pageId)
+      const v = tb.viewport()
+      const c = document.querySelector('.canvas-layer') as HTMLCanvasElement
+      const dpr = c.width / c.clientWidth
+      const ctx = c.getContext('2d')!
+      return pageObj.objects
+        .filter((o: any) => o.type === 'math')
+        .map((o: any) => {
+          const x = Math.round((v.panX + o.x * v.zoom) * dpr)
+          const y = Math.round((v.panY + o.y * v.zoom) * dpr)
+          const w = Math.max(1, Math.round(o.w * v.zoom * dpr))
+          const h = Math.max(1, Math.round(o.h * v.zoom * dpr))
+          const d = ctx.getImageData(x, y, w, h).data
+          let dark = 0
+          for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 300 && d[i + 3] > 200) dark++
+          return dark / (w * h)
+        })
+    })
+  await expect.poll(async () => Math.min(...(await inkPerEquation())), { timeout: 10_000 }).toBeGreaterThan(0.02)
 
   // Save, reopen, export.
   const dir = tempDir()
